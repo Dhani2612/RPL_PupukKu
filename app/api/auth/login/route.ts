@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from 'next/server'
 import pool from '@/lib/db'
 
@@ -14,7 +16,7 @@ export async function POST(req: Request) {
     }
 
     let query, params;
-    
+
     if (role === 'distributor') {
       query = `
         SELECT id_distributor, nama, username
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     const [rows]: any = await pool.execute(query, params)
-    console.log('Query result:', rows) // Debug log
+    console.log('Query result:', rows)
 
     if (!rows || rows.length === 0) {
       return NextResponse.json(
@@ -47,8 +49,7 @@ export async function POST(req: Request) {
     }
 
     const user = rows[0]
-
-    // Check verification status for pelanggan
+    
     if (role === 'pelanggan' && !user.status_verifikasi) {
       return NextResponse.json(
         { error: 'Account not verified. Please contact administrator.' },
@@ -67,4 +68,4 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
-} 
+}
