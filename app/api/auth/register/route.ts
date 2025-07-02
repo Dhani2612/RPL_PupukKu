@@ -1,56 +1,50 @@
+export const runtime = 'nodejs'
+
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json()
-    const { nik, nama, kelompok_tani, password, alamat, tanggal_lahir } = data
+    const { nik, nama, kelompok_tani, password, alamat, tanggal_lahir } = await req.json()
 
-    // Validate required fields
+    // Validasi input
     if (!nik || !nama || !password) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Check if NIK already exists
-    const [existingUsers] = await pool.execute(
-      'SELECT nik FROM pelanggan WHERE nik = ?',
-      [nik]
-    )
+    // Cek apakah NIK sudah terdaftar
+    const { data: existingUser, error: checkError } = await supabase
+      .from('pelanggan')
+      .select('nik')
+      .eq('nik', nik)
+      .single()
 
-    if ((existingUsers as any[]).length > 0) {
-      return NextResponse.json(
-        { error: 'NIK already registered' },
-        { status: 400 }
-      )
+    if (checkError === null && existingUser) {
+      return NextResponse.json({ error: 'NIK already registered' }, { status: 400 })
     }
 
-    // Insert new user
-    const query = `
-      INSERT INTO pelanggan 
-      (nik, nama, kelompok_tani, password, alamat, tanggal_lahir, status_verifikasi)
-      VALUES (?, ?, ?, ?, ?, ?, FALSE)
-    `
-    
-    await pool.execute(query, [
-      nik,
-      nama,
-      kelompok_tani || null,
-      password,
-      alamat || null,
-      tanggal_lahir || null,
+    // Insert user baru
+    const { error: insertError } = await supabase.from('pelanggan').insert([
+      {
+        nik,
+        nama,
+        kelompok_tani: kelompok_tani || null,
+        password, // ⚠️ nanti bisa diganti hash
+        alamat: alamat || null,
+        tanggal_lahir: tanggal_lahir || null,
+        status_verifikasi: false
+      }
     ])
 
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
     return NextResponse.json({
-      message: 'Registration successful. Please wait for admin verification.',
+      message: 'Registration successful. Please wait for admin verification.'
     })
   } catch (error) {
     console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}
