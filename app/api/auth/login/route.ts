@@ -1,58 +1,57 @@
-export const runtime = 'nodejs'
-
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 
 export async function POST(req: Request) {
   try {
-    const { username, password, role } = await req.json()
-    console.log('Login attempt:', { username, role })
+    const body = await req.json()
+    const { username, password, role } = body
 
+    // Validasi input
     if (!username || !password || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Data tidak lengkap' },
+        { status: 400 }
+      )
     }
 
-    let data, error
+    // Tentukan tabel dan kolom berdasarkan role
+    const isDistributor = role === 'distributor'
+    const tableName = isDistributor ? 'distributor' : 'pelanggan'
+    const idColumn = isDistributor ? 'username' : 'nik'
 
-    if (role === 'distributor') {
-      const res = await supabase
-        .from('distributor')
-        .select('id_distributor, nama, username, password')
-        .eq('username', username)
-        .eq('password', password) // WARNING: ideally hash password
-        .single()
-      data = res.data
-      error = res.error
-    } else if (role === 'pelanggan') {
-      const res = await supabase
-        .from('pelanggan')
-        .select('nik, nama, kelompok_tani, status_verifikasi, password')
-        .eq('nik', username)
-        .eq('password', password)
-        .single()
-      data = res.data
-      error = res.error
-    } else {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
-    }
+    // Query ke Supabase
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq(idColumn, username)
+      .eq('password', password)
+      .single()
 
     if (error || !data) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Username atau password salah' },
+        { status: 401 }
+      )
     }
 
-if (role === 'pelanggan') {
-  if (!('status_verifikasi' in data) || !data.status_verifikasi) {
-    return NextResponse.json(
-      { error: 'Account not verified. Please contact admin.' },
-      { status: 403 }
-    )
-  }
-}
+    // Verifikasi status jika pelanggan
+    if (!isDistributor && !data.status_verifikasi) {
+      return NextResponse.json(
+        { error: 'Akun belum diverifikasi' },
+        { status: 403 }
+      )
+    }
 
-return NextResponse.json({ user: data, role })
-
+    // Kirim data user & role
+    return NextResponse.json({
+      user: data,
+      role,
+    })
   } catch (err) {
     console.error('Login error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Terjadi kesalahan pada server' },
+      { status: 500 }
+    )
   }
 }
