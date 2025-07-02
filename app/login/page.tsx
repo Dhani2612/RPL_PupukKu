@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = "force-dynamic"
+
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -16,8 +18,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("pelanggan")
   const [isLoading, setIsLoading] = useState(false)
-  
-  // Registration form states
+
   const [registerData, setRegisterData] = useState({
     nik: "",
     nama: "",
@@ -26,7 +27,7 @@ export default function LoginPage() {
     alamat: "",
     tanggal_lahir: "",
   })
-  
+
   const router = useRouter()
   const { toast } = useToast()
 
@@ -35,28 +36,21 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-          role,
-        }),
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, role }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        // Show specific error message for unverified accounts
         if (response.status === 403) {
           toast({
             title: "Account Not Verified",
             description: "Your account has not been verified. Please contact the administrator.",
             variant: "destructive",
-            duration: 5000, // Show for 5 seconds
+            duration: 5000,
           })
         } else {
           toast({
@@ -68,30 +62,27 @@ export default function LoginPage() {
         return
       }
 
-      // Save user data to localStorage
       localStorage.setItem("userRole", role)
       localStorage.setItem("userName", data.user.nama)
-      if (role === 'pelanggan') {
+      if (role === "pelanggan") {
         localStorage.setItem("userNik", data.user.nik)
       } else {
         localStorage.setItem("userId", data.user.id_distributor.toString())
       }
 
-      // Show success toast
       toast({
         title: "Login Successful",
         description: `Welcome back, ${data.user.nama}!`,
         duration: 3000,
       })
 
-      // Redirect based on role
-      if (role === 'distributor') {
+      if (role === "distributor") {
         router.push("/admin/dashboard")
       } else {
         router.push("/customer/dashboard")
       }
     } catch (error) {
-      console.error('Login error:', error)
+      console.error("Login error:", error)
       toast({
         title: "Login Failed",
         description: "An unexpected error occurred. Please try again.",
@@ -107,11 +98,9 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(registerData),
       })
 
@@ -128,11 +117,10 @@ export default function LoginPage() {
 
       toast({
         title: "Registration Successful",
-        description: "Your account has been registered and is pending verification by an administrator.",
+        description: "Your account has been registered and is pending verification.",
         duration: 5000,
       })
 
-      // Reset form
       setRegisterData({
         nik: "",
         nama: "",
@@ -142,7 +130,7 @@ export default function LoginPage() {
         tanggal_lahir: "",
       })
     } catch (error) {
-      console.error('Registration error:', error)
+      console.error("Registration error:", error)
       toast({
         title: "Registration Failed",
         description: "An unexpected error occurred. Please try again.",
@@ -154,20 +142,14 @@ export default function LoginPage() {
   }
 
   const handleRegisterInputChange = (field: string, value: string) => {
-    setRegisterData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    setRegisterData(prev => ({ ...prev, [field]: value }))
   }
 
   return (
     <div
       className="min-h-screen"
-      style={{
-        background: "linear-gradient(to bottom, #f5f5dc 0%, #c8d68f 100%)",
-      }}
+      style={{ background: "linear-gradient(to bottom, #f5f5dc 0%, #c8d68f 100%)" }}
     >
-      {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
@@ -179,7 +161,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Login/Register Forms */}
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader className="text-center pb-4">
@@ -195,9 +176,7 @@ export default function LoginPage() {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="role" className="text-gray-700">
-                      Login Sebagai
-                    </Label>
+                    <Label htmlFor="role" className="text-gray-700">Login Sebagai</Label>
                     <Select value={role} onValueChange={setRole}>
                       <SelectTrigger className="h-12 rounded-lg border-gray-300">
                         <SelectValue placeholder="Pilih role" />
@@ -211,27 +190,25 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="username" className="text-gray-700">
-                      {role === 'pelanggan' ? 'NIK' : 'Username'}
+                      {role === "pelanggan" ? "NIK" : "Username"}
                     </Label>
                     <Input
                       id="username"
                       type="text"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={e => setUsername(e.target.value)}
                       className="h-12 rounded-lg border-gray-300"
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-gray-700">
-                      Password
-                    </Label>
+                    <Label htmlFor="password" className="text-gray-700">Password</Label>
                     <Input
                       id="password"
                       type="password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={e => setPassword(e.target.value)}
                       className="h-12 rounded-lg border-gray-300"
                       required
                     />
@@ -249,85 +226,33 @@ export default function LoginPage() {
 
               <TabsContent value="register">
                 <form onSubmit={handleRegister} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-nik" className="text-gray-700">
-                      NIK
-                    </Label>
-                    <Input
-                      id="reg-nik"
-                      type="text"
-                      value={registerData.nik}
-                      onChange={(e) => handleRegisterInputChange('nik', e.target.value)}
-                      className="h-12 rounded-lg border-gray-300"
-                      required
-                    />
-                  </div>
+                  {[
+                    ["reg-nik", "NIK", "nik"],
+                    ["reg-nama", "Nama Lengkap", "nama"],
+                    ["reg-kelompok-tani", "Kelompok Tani", "kelompok_tani"],
+                    ["reg-password", "Password", "password"],
+                    ["reg-alamat", "Alamat", "alamat"],
+                  ].map(([id, label, field]) => (
+                    <div className="space-y-2" key={id}>
+                      <Label htmlFor={id} className="text-gray-700">{label}</Label>
+                      <Input
+                        id={id}
+                        type={field === "password" ? "password" : "text"}
+                        value={registerData[field as keyof typeof registerData]}
+                        onChange={e => handleRegisterInputChange(field, e.target.value)}
+                        className="h-12 rounded-lg border-gray-300"
+                        required
+                      />
+                    </div>
+                  ))}
 
                   <div className="space-y-2">
-                    <Label htmlFor="reg-nama" className="text-gray-700">
-                      Nama Lengkap
-                    </Label>
-                    <Input
-                      id="reg-nama"
-                      type="text"
-                      value={registerData.nama}
-                      onChange={(e) => handleRegisterInputChange('nama', e.target.value)}
-                      className="h-12 rounded-lg border-gray-300"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-kelompok-tani" className="text-gray-700">
-                      Kelompok Tani
-                    </Label>
-                    <Input
-                      id="reg-kelompok-tani"
-                      type="text"
-                      value={registerData.kelompok_tani}
-                      onChange={(e) => handleRegisterInputChange('kelompok_tani', e.target.value)}
-                      className="h-12 rounded-lg border-gray-300"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-password" className="text-gray-700">
-                      Password
-                    </Label>
-                    <Input
-                      id="reg-password"
-                      type="password"
-                      value={registerData.password}
-                      onChange={(e) => handleRegisterInputChange('password', e.target.value)}
-                      className="h-12 rounded-lg border-gray-300"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-alamat" className="text-gray-700">
-                      Alamat
-                    </Label>
-                    <Input
-                      id="reg-alamat"
-                      type="text"
-                      value={registerData.alamat}
-                      onChange={(e) => handleRegisterInputChange('alamat', e.target.value)}
-                      className="h-12 rounded-lg border-gray-300"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-tanggal-lahir" className="text-gray-700">
-                      Tanggal Lahir
-                    </Label>
+                    <Label htmlFor="reg-tanggal-lahir" className="text-gray-700">Tanggal Lahir</Label>
                     <Input
                       id="reg-tanggal-lahir"
                       type="date"
                       value={registerData.tanggal_lahir}
-                      onChange={(e) => handleRegisterInputChange('tanggal_lahir', e.target.value)}
+                      onChange={e => handleRegisterInputChange("tanggal_lahir", e.target.value)}
                       className="h-12 rounded-lg border-gray-300"
                       required
                     />
