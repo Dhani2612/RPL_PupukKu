@@ -1,71 +1,58 @@
-export const runtime = "nodejs";
+export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function POST(req: Request) {
   try {
     const { username, password, role } = await req.json()
-    console.log('Login attempt:', { username, role }) // Debug log
+    console.log('Login attempt:', { username, role })
 
     if (!username || !password || !role) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    let query, params;
+    let data, error
 
     if (role === 'distributor') {
-      query = `
-        SELECT id_distributor, nama, username
-        FROM distributor 
-        WHERE username = ? AND password = ?
-      `
-      params = [username, password]
+      const res = await supabase
+        .from('distributor')
+        .select('id_distributor, nama, username, password')
+        .eq('username', username)
+        .eq('password', password) // WARNING: ideally hash password
+        .single()
+      data = res.data
+      error = res.error
     } else if (role === 'pelanggan') {
-      query = `
-        SELECT nik, nama, kelompok_tani, status_verifikasi
-        FROM pelanggan 
-        WHERE nik = ? AND password = ?
-      `
-      params = [username, password]
+      const res = await supabase
+        .from('pelanggan')
+        .select('nik, nama, kelompok_tani, status_verifikasi, password')
+        .eq('nik', username)
+        .eq('password', password)
+        .single()
+      data = res.data
+      error = res.error
     } else {
-      return NextResponse.json(
-        { error: 'Invalid role' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
 
-    const [rows]: any = await pool.execute(query, params)
-    console.log('Query result:', rows)
-
-    if (!rows || rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+    if (error || !data) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const user = rows[0]
-    
-    if (role === 'pelanggan' && !user.status_verifikasi) {
-      return NextResponse.json(
-        { error: 'Account not verified. Please contact administrator.' },
-        { status: 403 }
-      )
-    }
-
-    return NextResponse.json({
-      user,
-      role
-    })
-  } catch (error) {
-    console.error('Login error:', error)
+if (role === 'pelanggan') {
+  if (!('status_verifikasi' in data) || !data.status_verifikasi) {
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Account not verified. Please contact admin.' },
+      { status: 403 }
     )
+  }
+}
+
+return NextResponse.json({ user: data, role })
+
+  } catch (err) {
+    console.error('Login error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
