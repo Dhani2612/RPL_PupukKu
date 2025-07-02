@@ -358,7 +358,7 @@ export default function DataPelangganPage() {
                           <TableCell>{customer.alamat || '-'}</TableCell>
                           <TableCell>{formatDate(customer.tanggal_lahir)}</TableCell>
                           <TableCell>
-                            <Badge variant={customer.status_verifikasi ? "success" : "secondary"}>
+                            <Badge variant={customer.status_verifikasi ? "default" : "secondary"}>
                               {customer.status_verifikasi ? "Verified" : "Pending"}
                             </Badge>
                           </TableCell>
