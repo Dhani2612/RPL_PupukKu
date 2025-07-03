@@ -6,102 +6,50 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const idDistributor = params.id
 
-    const [rows] = await pool.execute(
-      `SELECT 
-        id_distributor, nama, username, 
-        created_at, updated_at
-      FROM distributor 
-      WHERE id_distributor = ?`,
-      [id]
-    )
-
-    if (!rows || (rows as any[]).length === 0) {
+    // Cek ID valid
+    if (!idDistributor) {
       return NextResponse.json(
-        { error: 'Distributor not found' },
-        { status: 404 }
+        { error: 'ID distributor tidak ditemukan' },
+        { status: 400 }
       )
     }
 
-    return NextResponse.json((rows as any)[0])
+    // Ambil total pelanggan yang menerima distribusi dari distributor ini
+    const [pelangganResult] = await pool.execute(
+      `SELECT COUNT(DISTINCT nik) AS totalPelanggan 
+       FROM distribusi 
+       WHERE id_distributor = ?`,
+      [idDistributor]
+    )
+
+    // Ambil total distribusi yang dilakukan
+    const [distribusiResult] = await pool.execute(
+      `SELECT COUNT(*) AS totalDistribusi 
+       FROM distribusi 
+       WHERE id_distributor = ?`,
+      [idDistributor]
+    )
+
+    // Ambil total jatah pupuk yang terdata
+    const [jatahResult] = await pool.execute(
+      `SELECT COUNT(*) AS totalJatah 
+       FROM jatah_pupuk 
+       WHERE id_distributor = ?`,
+      [idDistributor]
+    )
+
+    return NextResponse.json({
+      totalPelanggan: (pelangganResult as any)[0]?.totalPelanggan || 0,
+      totalDistribusi: (distribusiResult as any)[0]?.totalDistribusi || 0,
+      totalJatah: (jatahResult as any)[0]?.totalJatah || 0,
+    })
   } catch (error) {
-    console.error('Error fetching distributor:', error)
+    console.error('Error fetching distributor stats:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Terjadi kesalahan pada server' },
       { status: 500 }
     )
   }
 }
-
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params
-    const data = await req.json()
-    const { nama, username } = data
-
-    // Validate required fields
-    if (!nama || !username) {
-      return NextResponse.json(
-        { error: 'Name and username are required' },
-        { status: 400 }
-      )
-    }
-
-    // Check if username is already taken by another distributor
-    const [existingUsers] = await pool.execute(
-      'SELECT id_distributor FROM distributor WHERE username = ? AND id_distributor != ?',
-      [username, id]
-    )
-
-    if ((existingUsers as any[]).length > 0) {
-      return NextResponse.json(
-        { error: 'Username is already taken' },
-        { status: 400 }
-      )
-    }
-
-    // Update distributor
-    const query = `
-      UPDATE distributor 
-      SET nama = ?, 
-          username = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id_distributor = ?
-    `
-
-    const [result] = await pool.execute(query, [
-      nama,
-      username,
-      id
-    ])
-
-    if ((result as any).affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Distributor not found' },
-        { status: 404 }
-      )
-    }
-
-    // Fetch updated distributor data
-    const [rows] = await pool.execute(
-      `SELECT 
-        id_distributor, nama, username, 
-        created_at, updated_at
-      FROM distributor 
-      WHERE id_distributor = ?`,
-      [id]
-    )
-
-    return NextResponse.json((rows as any)[0])
-  } catch (error) {
-    console.error('Error updating distributor:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-} 
