@@ -64,20 +64,24 @@ export default function DistribusiPupukPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole")
-    if (role !== "distributor") {
-      router.push("/login")
-      return
-    }
-
-    fetchDistributions()
-  }, [router])
+useEffect(() => {
+  const role = localStorage.getItem("userRole")
+  if (role !== "distributor") {
+    router.push("/login")
+    return
+  }
 
   const fetchDistributions = async () => {
     try {
       const response = await fetch('/api/distribusi')
       const data = await response.json()
+
+      if (!Array.isArray(data)) {
+        console.error("Unexpected data format:", data)
+        setDistributions([]) // Kosongkan agar tidak crash
+        return
+      }
+
       setDistributions(data)
     } catch (error) {
       console.error('Error fetching distributions:', error)
@@ -86,8 +90,13 @@ export default function DistribusiPupukPage() {
         description: "Failed to fetch distribution data",
         variant: "destructive",
       })
+      setDistributions([]) // Kosongkan agar tetap stabil
     }
   }
+
+  fetchDistributions()
+}, [router])
+
 
   const handleStatusUpdate = async (id: number, status: 'approved' | 'rejected') => {
     setConfirmDialog({
