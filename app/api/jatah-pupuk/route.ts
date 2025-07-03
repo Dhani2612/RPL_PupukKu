@@ -3,8 +3,11 @@ import pool from '@/lib/db'
 
 export async function GET(req: Request) {
   try {
+    console.log('✅ [GET] /api/jatah-pupuk called')
+
     const { searchParams } = new URL(req.url)
     const nik = searchParams.get('nik')
+    console.log('📥 NIK parameter:', nik)
 
     let query: string
     let params: string[] = []
@@ -26,8 +29,10 @@ export async function GET(req: Request) {
     }
 
     const [rows] = await pool.execute(query, params)
+    console.log('📦 Fetched quota rows:', rows)
 
     if (nik && (!rows || (rows as any[]).length === 0)) {
+      console.warn('⚠️ Quota not found for NIK:', nik)
       return NextResponse.json(
         { error: 'Quota not found' },
         { status: 404 }
@@ -41,6 +46,7 @@ export async function GET(req: Request) {
         SUM(organik) as total_organik
       FROM jatah_pupuk
     `)
+    console.log('📊 Total stats:', totalStats)
 
     const [usedStats] = await pool.execute(`
       SELECT 
@@ -50,6 +56,7 @@ export async function GET(req: Request) {
       FROM distribusi_pupuk
       WHERE status_acc = 'approved'
     `)
+    console.log('📉 Used stats:', usedStats)
 
     const total = {
       urea: (totalStats as any)[0].total_urea || 0,
@@ -72,6 +79,7 @@ export async function GET(req: Request) {
         organik: total.organik - used.organik
       }
     }
+    console.log('📈 Final stats (total/used/remaining):', stats)
 
     const transformedRows = (rows as any[]).map(row => ({
       id_jatah: row.id_jatah,
@@ -84,13 +92,14 @@ export async function GET(req: Request) {
         kelompok_tani: row.kelompok_tani
       }
     }))
+    console.log('✅ Transformed rows:', transformedRows)
 
     return NextResponse.json({
       quotas: nik ? transformedRows[0] : transformedRows,
       stats
     })
   } catch (error) {
-    console.error('Error fetching quotas:', error)
+    console.error('❌ Error fetching quotas:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
