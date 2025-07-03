@@ -7,56 +7,73 @@ export async function POST(req: Request) {
   try {
     const { nik, nama, kelompok_tani, password, alamat, tanggal_lahir } = await req.json()
 
-
-    // Validasi input
+    // 1. Validasi input
     if (!nik || !nama || !password) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-
-
-
+      return NextResponse.json(
+        { error: 'NIK, nama, dan password wajib diisi.' },
+        { status: 400 }
+      )
     }
 
-    // Cek apakah NIK sudah terdaftar
-    const { data: existingUser, error: checkError } = await supabase
+    // 2. Cek apakah sudah ada
+    const { data: existing, error: checkError } = await supabase
       .from('pelanggan')
       .select('nik')
       .eq('nik', nik)
       .single()
 
-    if (checkError === null && existingUser) {
-      return NextResponse.json({ error: 'NIK already registered' }, { status: 400 })
-
-
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 = “No rows found” biasa saat single dan kosong
+      console.error('Error checking existing pelanggan:', checkError)
+      return NextResponse.json(
+        { error: 'Gagal cek NIK: ' + checkError.message },
+        { status: 500 }
+      )
+    }
+    if (existing) {
+      return NextResponse.json(
+        { error: 'NIK sudah terdaftar.' },
+        { status: 400 }
+      )
     }
 
-    // Insert user baru
-    const { error: insertError } = await supabase.from('pelanggan').insert([
-      {
-        nik,
-        nama,
-        kelompok_tani: kelompok_tani || null,
-        password, // ⚠️ nanti bisa diganti hash
-        alamat: alamat || null,
-        tanggal_lahir: tanggal_lahir || null,
-        status_verifikasi: false
-      }
-
-
-
-    ])
+    // 3. Insert data baru
+    const { data: inserted, error: insertError } = await supabase
+      .from('pelanggan')
+      .insert([
+        {
+          nik,
+          nama,
+          kelompok_tani: kelompok_tani || null,
+          password,           // nanti bisa diganti dengan hash
+          alamat: alamat || null,
+          tanggal_lahir: tanggal_lahir || null,
+          status_verifikasi: false
+        }
+      ])
+      .select()              // minta Supabase mengembalikan baris yang baru dibuat
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+      console.error('Supabase insert error:', insertError)
+      return NextResponse.json(
+        { error: 'Gagal registrasi: ' + insertError.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({
-      message: 'Registration successful. Please wait for admin verification.'
-    })
-  } catch (error) {
-    console.error('Registration error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-
-
-
+    // 4. Sukses
+    return NextResponse.json(
+      {
+        message: 'Registrasi berhasil. Silakan menunggu verifikasi admin.',
+        pelanggan: inserted![0]
+      },
+      { status: 201 }
+    )
+  } catch (err: any) {
+    console.error('Unhandled registration error:', err)
+    return NextResponse.json(
+      { error: 'Internal server error: ' + err.message },
+      { status: 500 }
+    )
   }
 }
