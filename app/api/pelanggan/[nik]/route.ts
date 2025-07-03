@@ -8,26 +8,19 @@ export async function DELETE(
   try {
     const { nik } = params
 
-    // Delete customer
     const [result] = await pool.execute(
       'DELETE FROM pelanggan WHERE nik = ?',
       [nik]
     )
 
     if ((result as any).affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Customer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
     return NextResponse.json({ message: 'Customer deleted successfully' })
   } catch (error) {
     console.error('Error deleting customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -40,7 +33,10 @@ export async function PATCH(
     const data = await req.json()
     const { nama, kelompok_tani, alamat, tanggal_lahir } = data
 
-    // Update customer
+    if (!nama) {
+      return NextResponse.json({ error: 'Nama wajib diisi' }, { status: 400 })
+    }
+
     const query = `
       UPDATE pelanggan 
       SET nama = ?, 
@@ -60,29 +56,17 @@ export async function PATCH(
     ])
 
     if ((result as any).affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Customer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
     }
 
-    // Fetch updated customer data
     const [rows] = await pool.execute(
-      `SELECT 
-        nik, nama, kelompok_tani, alamat, 
-        tanggal_lahir, status_verifikasi, 
-        created_at, updated_at
-      FROM pelanggan 
-      WHERE nik = ?`,
+      `SELECT nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi, created_at, updated_at FROM pelanggan WHERE nik = ?`,
       [nik]
     )
 
     return NextResponse.json((rows as any)[0])
   } catch (error) {
     console.error('Error updating customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}
