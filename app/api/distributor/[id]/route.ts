@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(
   req: Request,
@@ -8,7 +8,6 @@ export async function GET(
   try {
     const idDistributor = params.id
 
-    // Cek ID valid
     if (!idDistributor) {
       return NextResponse.json(
         { error: 'ID distributor tidak ditemukan' },
@@ -16,37 +15,43 @@ export async function GET(
       )
     }
 
-    // Ambil total pelanggan yang menerima distribusi dari distributor ini
-    const [pelangganResult] = await pool.execute(
-      `SELECT COUNT(DISTINCT nik) AS totalPelanggan 
-       FROM distribusi 
-       WHERE id_distributor = ?`,
-      [idDistributor]
-    )
+    // Ambil total pelanggan unik yang menerima distribusi dari distributor ini
+    const { data: distribusiData, error: distribusiError } = await supabase
+      .from('distribusi')
+      .select('nik, id_distributor')
+      .eq('id_distributor', idDistributor)
 
-    // Ambil total distribusi yang dilakukan
-    const [distribusiResult] = await pool.execute(
-      `SELECT COUNT(*) AS totalDistribusi 
-       FROM distribusi 
-       WHERE id_distributor = ?`,
-      [idDistributor]
-    )
+    if (distribusiError) {
+      console.error('❌ Error ambil distribusi:', distribusiError)
+      return NextResponse.json({ error: 'Gagal ambil distribusi' }, { status: 500 })
+    }
 
-    // Ambil total jatah pupuk yang terdata
-    const [jatahResult] = await pool.execute(
-      `SELECT COUNT(*) AS totalJatah 
-       FROM jatah_pupuk 
-       WHERE id_distributor = ?`,
-      [idDistributor]
-    )
+    const pelangganSet = new Set<string>()
+    distribusiData?.forEach((item) => {
+      if (item.nik) pelangganSet.add(item.nik)
+    })
+
+    // Total distribusi = jumlah baris
+    const totalDistribusi = distribusiData?.length || 0
+
+    // Ambil jatah pupuk dari distributor ini
+    const { data: jatahData, error: jatahError } = await supabase
+      .from('jatah_pupuk')
+      .select('id_jatah')
+      .eq('id_distributor', idDistributor)
+
+    if (jatahError) {
+      console.error('❌ Error ambil jatah:', jatahError)
+      return NextResponse.json({ error: 'Gagal ambil data jatah' }, { status: 500 })
+    }
 
     return NextResponse.json({
-      totalPelanggan: (pelangganResult as any)[0]?.totalPelanggan || 0,
-      totalDistribusi: (distribusiResult as any)[0]?.totalDistribusi || 0,
-      totalJatah: (jatahResult as any)[0]?.totalJatah || 0,
+      totalPelanggan: pelangganSet.size,
+      totalDistribusi,
+      totalJatah: jatahData?.length || 0
     })
   } catch (error) {
-    console.error('Error fetching distributor stats:', error)
+    console.error('❌ Error fetching distributor stats:', error)
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },
       { status: 500 }

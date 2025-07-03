@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(req: Request) {
   try {
@@ -9,65 +9,72 @@ export async function GET(req: Request) {
     const nik = searchParams.get('nik')
     console.log('📥 NIK parameter:', nik)
 
-    let query: string
-    let params: string[] = []
+    // Query data jatah + pelanggan
+    const { data: quotasRaw, error: quotasError } = nik
+      ? await supabase
+          .from('jatah_pupuk')
+          .select(`
+            id_jatah,
+            nik,
+            urea,
+            phonska,
+            organik,
+            pelanggan:nama,
+            pelanggan!inner(kelompok_tani)
+          `)
+          .eq('nik', nik)
+      : await supabase
+          .from('jatah_pupuk')
+          .select(`
+            id_jatah,
+            nik,
+            urea,
+            phonska,
+            organik,
+            pelanggan:nama,
+            pelanggan!inner(kelompok_tani)
+          `)
 
-    if (nik) {
-      query = `
-        SELECT j.*, p.nama, p.kelompok_tani
-        FROM jatah_pupuk j
-        JOIN pelanggan p ON j.nik = p.nik
-        WHERE j.nik = ?
-      `
-      params = [nik]
-    } else {
-      query = `
-        SELECT j.*, p.nama, p.kelompok_tani
-        FROM jatah_pupuk j
-        JOIN pelanggan p ON j.nik = p.nik
-      `
+    if (quotasError) {
+      console.error('❌ Supabase quota error:', quotasError)
+      return NextResponse.json({ error: 'Failed to fetch quota' }, { status: 500 })
     }
 
-    const [rows] = await pool.execute(query, params)
-    console.log('📦 Fetched quota rows:', rows)
-
-    if (nik && (!rows || (rows as any[]).length === 0)) {
-      console.warn('⚠️ Quota not found for NIK:', nik)
-      return NextResponse.json(
-        { error: 'Quota not found' },
-        { status: 404 }
-      )
+    if (nik && quotasRaw.length === 0) {
+      return NextResponse.json({ error: 'Quota not found' }, { status: 404 })
     }
 
-    const [totalStats] = await pool.execute(`
-      SELECT 
-        SUM(urea) as total_urea,
-        SUM(phonska) as total_phonska,
-        SUM(organik) as total_organik
-      FROM jatah_pupuk
-    `)
-    console.log('📊 Total stats:', totalStats)
+    // Query total stats
+    const { data: totalStats, error: totalErr } = await supabase
+      .from('jatah_pupuk')
+      .select('urea, phonska, organik')
 
-    const [usedStats] = await pool.execute(`
-      SELECT 
-        SUM(CASE WHEN jenis_pupuk = 'Urea' THEN jumlah ELSE 0 END) as used_urea,
-        SUM(CASE WHEN jenis_pupuk = 'Phonska' THEN jumlah ELSE 0 END) as used_phonska,
-        SUM(CASE WHEN jenis_pupuk = 'Organik' THEN jumlah ELSE 0 END) as used_organik
-      FROM distribusi_pupuk
-      WHERE status_acc = 'approved'
-    `)
-    console.log('📉 Used stats:', usedStats)
+    if (totalErr) {
+      console.error('❌ Error fetching total stats:', totalErr)
+      return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
+    }
 
     const total = {
-      urea: (totalStats as any)[0].total_urea || 0,
-      phonska: (totalStats as any)[0].total_phonska || 0,
-      organik: (totalStats as any)[0].total_organik || 0
+      urea: totalStats?.reduce((sum, row) => sum + Number(row.urea ?? 0), 0),
+      phonska: totalStats?.reduce((sum, row) => sum + Number(row.phonska ?? 0), 0),
+      organik: totalStats?.reduce((sum, row) => sum + Number(row.organik ?? 0), 0)
+    }
+
+    // Query used stats (approved only)
+    const { data: usedStats, error: usedErr } = await supabase
+      .from('distribusi_pupuk')
+      .select('jenis_pupuk, jumlah')
+      .eq('status_acc', 'approved')
+
+    if (usedErr) {
+      console.error('❌ Error fetching used stats:', usedErr)
+      return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
     }
 
     const used = {
-      urea: (usedStats as any)[0].used_urea || 0,
-      phonska: (usedStats as any)[0].used_phonska || 0,
-      organik: (usedStats as any)[0].used_organik || 0
+      urea: usedStats?.filter(r => r.jenis_pupuk === 'Urea').reduce((sum, r) => sum + Number(r.jumlah ?? 0), 0) || 0,
+      phonska: usedStats?.filter(r => r.jenis_pupuk === 'Phonska').reduce((sum, r) => sum + Number(r.jumlah ?? 0), 0) || 0,
+      organik: usedStats?.filter(r => r.jenis_pupuk === 'Organik').reduce((sum, r) => sum + Number(r.jumlah ?? 0), 0) || 0
     }
 
     const stats = {
@@ -79,30 +86,25 @@ export async function GET(req: Request) {
         organik: total.organik - used.organik
       }
     }
-    console.log('📈 Final stats (total/used/remaining):', stats)
 
-    const transformedRows = (rows as any[]).map(row => ({
+    const quotas = quotasRaw.map((row: any) => ({
       id_jatah: row.id_jatah,
       nik: row.nik,
       urea: row.urea,
       phonska: row.phonska,
       organik: row.organik,
       pelanggan: {
-        nama: row.nama,
+        nama: row.pelanggan,
         kelompok_tani: row.kelompok_tani
       }
     }))
-    console.log('✅ Transformed rows:', transformedRows)
 
     return NextResponse.json({
-      quotas: nik ? transformedRows[0] : transformedRows,
+      quotas: nik ? quotas[0] : quotas,
       stats
     })
   } catch (error) {
-    console.error('❌ Error fetching quotas:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('❌ Uncaught error fetching quotas:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

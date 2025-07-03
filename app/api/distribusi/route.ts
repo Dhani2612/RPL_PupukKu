@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(req: Request) {
   try {
@@ -8,41 +8,45 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    let query = `
-      SELECT 
-        d.id_distribusi, d.tanggal_distribusi, d.status_acc, 
-        p.nama as nama_pelanggan, 
-        p.nik, p.kelompok_tani, p.alamat,
-        pup.jenis_pupuk, pup.jumlah_kg 
-      FROM distribusi d
-      JOIN pelanggan p ON d.nik = p.nik
-      JOIN pupuk pup ON d.id_pupuk = pup.id_pupuk
-      WHERE 1 = 1
-    `
-    const params: any[] = []
+    let query = supabase
+      .from('distribusi')
+      .select(`
+        id_distribusi,
+        tanggal_distribusi,
+        status_acc,
+        pelanggan:nik (
+          nik,
+          nama,
+          kelompok_tani,
+          alamat
+        ),
+        pupuk: id_pupuk (
+          jenis_pupuk,
+          jumlah_kg
+        )
+      `)
+      .order('tanggal_distribusi', { ascending: false })
 
-    // 🔍 Filter by status (e.g. ?status=pending)
+    // Filter by status
     if (status) {
-      query += ` AND d.status_acc = ?`
-      params.push(status)
+      query = query.eq('status_acc', status)
     }
 
-    // 🔍 Filter by date range (e.g. ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD)
+    // Filter by date
     if (startDate && endDate) {
-      query += ` AND DATE(d.tanggal_distribusi) BETWEEN ? AND ?`
-      params.push(startDate, endDate)
+      query = query.gte('tanggal_distribusi', startDate).lte('tanggal_distribusi', endDate)
     }
 
-    query += ` ORDER BY d.tanggal_distribusi DESC`
+    const { data, error } = await query
 
-    const [rows] = await pool.execute(query, params)
+    if (error) {
+      console.error('❌ Error fetching distribusi:', error)
+      return NextResponse.json({ error: 'Gagal mengambil data distribusi' }, { status: 500 })
+    }
 
-    return NextResponse.json(rows)
+    return NextResponse.json(data)
   } catch (error) {
-    console.error("Error fetching distribusi:", error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('❌ Server error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
