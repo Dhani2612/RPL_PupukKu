@@ -70,7 +70,7 @@ export async function PATCH(req: Request) {
       [nik]
     )
 
-    return NextResponse.json((rows as any[])[0])
+    return NextResponse.json(rows)
   } catch (error) {
     console.error('Error updating customer:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
