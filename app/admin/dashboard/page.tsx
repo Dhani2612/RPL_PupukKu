@@ -37,57 +37,60 @@ export default function AdminDashboard() {
     setUserName(name || "Administrator")
   }, [router])
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        // Fetch total customers
-        const customersRes = await fetch('/api/pelanggan')
-        if (!customersRes.ok) throw new Error('Failed to fetch customers')
-        const customers = await customersRes.json()
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      // 🔎 1. Fetch pelanggan
+      const customersRes = await fetch('/api/pelanggan')
+      console.log("Fetch pelanggan status:", customersRes.status)
+      if (!customersRes.ok) throw new Error('fetch pelanggan gagal')
+      const customers = await customersRes.json()
 
-        // Fetch distributions for current month
-        const now = new Date()
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-        
-        const distribusiRes = await fetch(
-          `/api/distribusi?startDate=${startOfMonth}&endDate=${endOfMonth}`
-        )
-        if (!distribusiRes.ok) throw new Error('Failed to fetch distributions')
-        const distribusi = await distribusiRes.json()
+      // 🔎 2. Fetch distribusi bulan ini
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+      const distribusiRes = await fetch(`/api/distribusi?startDate=${startOfMonth}&endDate=${endOfMonth}`)
+      console.log("Fetch distribusi bulan ini status:", distribusiRes.status)
+      if (!distribusiRes.ok) throw new Error('fetch distribusi bulan ini gagal')
+      const distribusi = await distribusiRes.json()
 
-        // Fetch pending distributions
-        const pendingRes = await fetch('/api/distribusi?status=pending')
-        if (!pendingRes.ok) throw new Error('Failed to fetch pending distributions')
-        const pending = await pendingRes.json()
+      // 🔎 3. Fetch distribusi pending
+      const pendingRes = await fetch('/api/distribusi?status=pending')
+      console.log("Fetch distribusi pending status:", pendingRes.status)
+      if (!pendingRes.ok) throw new Error('fetch distribusi pending gagal')
+      const pending = await pendingRes.json()
 
-        // Calculate efficiency (approved distributions / total distributions) * 100
-        const allDistribusiRes = await fetch('/api/distribusi')
-        if (!allDistribusiRes.ok) throw new Error('Failed to fetch all distributions')
-        const allDistribusi = await allDistribusiRes.json()
-        const approvedDistribusi = allDistribusi.filter((d: any) => d.status_acc === 'approved')
-        const efisiensi = allDistribusi.length > 0 
-          ? (approvedDistribusi.length / allDistribusi.length) * 100 
-          : 100
+      // 🔎 4. Fetch semua distribusi
+      const allDistribusiRes = await fetch('/api/distribusi')
+      console.log("Fetch semua distribusi status:", allDistribusiRes.status)
+      if (!allDistribusiRes.ok) throw new Error('fetch semua distribusi gagal')
+      const allDistribusi = await allDistribusiRes.json()
 
-        setStats({
-          totalPelanggan: customers.length,
-          distribusiBulanIni: distribusi.length,
-          pendingApproval: pending.length,
-          efisiensiDistribusi: Math.round(efisiensi),
-        })
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch dashboard statistics",
-          variant: "destructive",
-        })
-      }
+      const approvedDistribusi = allDistribusi.filter((d: any) => d.status_acc === 'approved')
+      const efisiensi = allDistribusi.length > 0
+        ? (approvedDistribusi.length / allDistribusi.length) * 100
+        : 100
+
+      setStats({
+        totalPelanggan: customers.length,
+        distribusiBulanIni: distribusi.length,
+        pendingApproval: pending.length,
+        efisiensiDistribusi: Math.round(efisiensi),
+      })
+    } catch (err: any) {
+      console.error("❌ Error:", err.message)
+      toast({
+        title: "Error",
+        description: `Gagal ambil data dashboard: ${err.message}`,
+        variant: "destructive",
+      })
     }
+  }
 
-    fetchStats()
-  }, [toast])
+  fetchStats()
+}, [toast])
+
 
   const statsCards = [
     {
