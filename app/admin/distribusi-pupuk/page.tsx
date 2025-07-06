@@ -199,13 +199,13 @@ useEffect(() => {
     ]
     const rows = distributions.map(dist => [
       dist.id_transaksi,
-      dist.pelanggan.nama,
-      dist.pelanggan.kelompok_tani || '-',
+      dist.pelanggan?.nama || '-',
+      dist.pelanggan?.kelompok_tani || '-',
       dist.jenis_pupuk,
       dist.jumlah,
       new Date(dist.tanggal).toLocaleDateString('id-ID'),
       dist.status_acc,
-      dist.distributor.nama
+      dist.distributor?.nama || '-'
     ])
 
     const csvContent = [
@@ -303,8 +303,8 @@ useEffect(() => {
                     <TableRow key={distribution.id_transaksi} className="hover:bg-muted/50">
                       <TableCell className="font-medium">{distribution.id_transaksi}</TableCell>
                       <TableCell className="font-medium">{distribution.nik}</TableCell>
-                      <TableCell>{distribution.pelanggan.nama}</TableCell>
-                      <TableCell>{distribution.pelanggan.kelompok_tani || '-'}</TableCell>
+                      <TableCell>{distribution.pelanggan?.nama || '-'}</TableCell>
+                      <TableCell>{distribution.pelanggan?.kelompok_tani || '-'}</TableCell>
                       <TableCell>{distribution.jenis_pupuk}</TableCell>
                       <TableCell>{distribution.jumlah}</TableCell>
                       <TableCell>{new Date(distribution.tanggal).toLocaleDateString('id-ID')}</TableCell>
@@ -371,8 +371,8 @@ useEffect(() => {
                     <TableRow key={distribution.id_transaksi} className="hover:bg-muted/50">
                       <TableCell className="font-medium">{distribution.id_transaksi}</TableCell>
                       <TableCell className="font-medium">{distribution.nik}</TableCell>
-                      <TableCell>{distribution.pelanggan.nama}</TableCell>
-                      <TableCell>{distribution.pelanggan.kelompok_tani || '-'}</TableCell>
+                      <TableCell>{distribution.pelanggan?.nama || '-'}</TableCell>
+                      <TableCell>{distribution.pelanggan?.kelompok_tani || '-'}</TableCell>
                       <TableCell>{distribution.jenis_pupuk}</TableCell>
                       <TableCell>{distribution.jumlah}</TableCell>
                       <TableCell>{new Date(distribution.tanggal).toLocaleDateString('id-ID')}</TableCell>
