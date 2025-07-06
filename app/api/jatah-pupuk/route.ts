@@ -129,3 +129,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { nik, urea, phonska, organik } = body
+
+    if (!nik) {
+      return NextResponse.json({ error: 'NIK is required' }, { status: 400 })
+    }
+
+    const updates: Record<string, number> = {}
+    if (urea !== undefined) updates.urea = urea
+    if (phonska !== undefined) updates.phonska = phonska
+    if (organik !== undefined) updates.organik = organik
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No data to update' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('jatah_pupuk')
+      .update(updates)
+      .eq('nik', nik)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Supabase update error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { data: pelanggan } = await supabase
+      .from('pelanggan')
+      .select('nama, kelompok_tani')
+      .eq('nik', nik)
+      .single()
+
+    return NextResponse.json({
+      ...data,
+      pelanggan: {
+        nama: pelanggan?.nama || '-',
+        kelompok_tani: pelanggan?.kelompok_tani || '-'
+      }
+    })
+  } catch (error) {
+    console.error('❌ PATCH error in /api/jatah-pupuk:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
