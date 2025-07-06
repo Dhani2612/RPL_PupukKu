@@ -200,10 +200,7 @@ export default function AdminProfilePage() {
                 <Avatar className="w-24 h-24">
                   <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Profile" />
                   <AvatarFallback className="text-2xl bg-green-100 text-green-600">
-                    {profile.nama
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {profile?.nama?.split(" ").map((n) => n[0]).join("") || "AD"}
                   </AvatarFallback>
                 </Avatar>
               </div>
