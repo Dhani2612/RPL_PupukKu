@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     console.log('🔍 Params:', { status, startDate, endDate, nik, limit })
 
     let query = supabase
-      .from('distribusi')
+      .from('distribusi_pupuk')
       .select('*') // ambil semua kolom dulu
       .order('tanggal', { ascending: false })
 
