@@ -24,16 +24,18 @@ export async function GET(req: Request) {
       .returns<Pelanggan[]>()
 
 if (nik) {
-const { data, error } = await supabase
-  .from('pelanggan')
-  .select('nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi, id_distributor') // ✅ Tambahkan ini
-  .eq('nik', nik)
-  .single()
+  const { data, error } = await supabase
+    .from('pelanggan')
+    .select('nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi, id_distributor')
+    .eq('nik', nik)
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
-  return NextResponse.json(data)
+
+  return NextResponse.json(data) // <-- pastikan di-return agar tidak lanjut ke bawah
 }
+
 
 
     const { data, error } = await query
