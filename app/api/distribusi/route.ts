@@ -81,3 +81,38 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
+    const { nik, id_distributor, jenis_pupuk, jumlah, tanggal } = body
+
+    if (!nik || !id_distributor || !jenis_pupuk || !jumlah || !tanggal) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('distribusi_pupuk')
+      .insert([
+        {
+          nik,
+          id_distributor,
+          jenis_pupuk,
+          jumlah,
+          tanggal,
+          status_acc: 'pending' // default status
+        }
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data) // ✅ kembalikan data valid
+  } catch (error) {
+    console.error('❌ Error in POST /api/distribusi:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
