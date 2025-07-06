@@ -41,3 +41,43 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const { id_transaksi, status_acc } = await req.json()
+
+    if (!id_transaksi || !status_acc) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('distribusi_pupuk')
+      .update({ status_acc })
+      .eq('id_transaksi', id_transaksi)
+      .select(`
+        id_transaksi,
+        nik,
+        jenis_pupuk,
+        jumlah,
+        tanggal,
+        status_acc,
+        pelanggan:nik (
+          nama,
+          kelompok_tani
+        ),
+        distributor:id_distributor (
+          nama
+        )
+      `)
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data) // ✅ Kembalikan data yang valid
+  } catch (error) {
+    console.error('❌ Error in PATCH /api/distribusi:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
