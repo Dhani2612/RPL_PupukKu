@@ -122,43 +122,54 @@ export default function AdminProfilePage() {
     return true
   }
 
-  const handleSave = async () => {
-    if (!validateProfile()) return
+const handleSave = async () => {
+  if (!validateProfile()) return
 
-    try {
-      const response = await fetch(`/api/distributor/${profile.id_distributor}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nama: editedProfile.nama,
-          username: editedProfile.username,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to update profile')
-      }
-
-      const updatedData = await response.json()
-      setProfile(updatedData)
-      setIsEditing(false)
-
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated",
-      })
-    } catch (error) {
-      console.error('Error updating profile:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
-        variant: "destructive",
-      })
-    }
+  // Tambahan validasi ID Distributor
+  const id = profile?.id_distributor
+  if (!id || id === 0 || isNaN(id)) {
+    toast({
+      title: "Error",
+      description: "ID distributor tidak valid. Silakan login ulang.",
+      variant: "destructive",
+    })
+    return
   }
+
+  try {
+    const response = await fetch(`/api/distributor/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nama: editedProfile.nama,
+        username: editedProfile.username,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Failed to update profile')
+    }
+
+    const updatedData = await response.json()
+    setProfile(updatedData)
+    setIsEditing(false)
+
+    toast({
+      title: "Profile Updated",
+      description: "Your profile has been successfully updated",
+    })
+  } catch (error) {
+    console.error('Error updating profile:', error)
+    toast({
+      title: "Error",
+      description: error instanceof Error ? error.message : "Failed to update profile",
+      variant: "destructive",
+    })
+  }
+}
 
   const handleCancel = () => {
     setIsEditing(false)

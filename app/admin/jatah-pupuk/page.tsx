@@ -101,7 +101,15 @@ export default function JatahPupukPage() {
 
     fetchQuotas()
     fetchVerifiedCustomers()
+
+    // ⏱️ Tambahan: Refresh otomatis setiap 10 detik
+    const interval = setInterval(() => {
+      fetchQuotas()
+    }, 10000)
+
+    return () => clearInterval(interval) // 🔁 Bersihkan saat unmount
   }, [router])
+
 
   const fetchQuotas = async () => {
     try {
