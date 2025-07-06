@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 if (nik) {
   const { data, error } = await supabase
     .from('pelanggan')
-    .select('nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi, id_distributor')
+    .select('nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi')
     .eq('nik', nik)
     .single()
 
