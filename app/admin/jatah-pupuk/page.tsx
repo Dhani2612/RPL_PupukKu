@@ -92,23 +92,35 @@ export default function JatahPupukPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole")
-    if (role !== "distributor") {
-      router.push("/login")
-      return
-    }
+useEffect(() => {
+  const role = localStorage.getItem("userRole")
+  if (role !== "distributor") {
+    router.push("/login")
+    return
+  }
 
+  const fetchAll = () => {
     fetchQuotas()
     fetchVerifiedCustomers()
+  }
 
-    // ⏱️ Tambahan: Refresh otomatis setiap 10 detik
-    const interval = setInterval(() => {
-      fetchQuotas()
-    }, 10000)
+  // Initial fetch
+  fetchAll()
 
-    return () => clearInterval(interval) // 🔁 Bersihkan saat unmount
-  }, [router])
+  // Re-fetch saat user kembali ke tab ini
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      fetchAll()
+    }
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange)
+
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }
+}, [router])
+
 
 
   const fetchQuotas = async () => {
