@@ -15,9 +15,9 @@ export async function GET(
       )
     }
 
-    // Ambil total pelanggan unik yang menerima distribusi dari distributor ini
+    // Ambil semua data distribusi dari distributor ini
     const { data: distribusiData, error: distribusiError } = await supabase
-      .from('distribusi')
+      .from('distribusi_pupuk') // ✅ diganti dari 'distribusi' ke 'distribusi_pupuk'
       .select('nik, id_distributor')
       .eq('id_distributor', idDistributor)
 
@@ -31,7 +31,6 @@ export async function GET(
       if (item.nik) pelangganSet.add(item.nik)
     })
 
-    // Total distribusi = jumlah baris
     const totalDistribusi = distribusiData?.length || 0
 
     // Ambil jatah pupuk dari distributor ini

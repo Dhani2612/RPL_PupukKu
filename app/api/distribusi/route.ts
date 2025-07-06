@@ -14,7 +14,21 @@ export async function GET(req: Request) {
 
     let query = supabase
       .from('distribusi_pupuk')
-      .select('*') // ambil semua kolom dulu
+      .select(`
+        id_transaksi,
+        nik,
+        jenis_pupuk,
+        jumlah,
+        tanggal,
+        status_acc,
+        pelanggan:nik (
+          nama,
+          kelompok_tani
+        ),
+        distributor:id_distributor (
+          nama
+        )
+      `)
       .order('tanggal', { ascending: false })
 
     if (status) query = query.eq('status_acc', status)
@@ -34,13 +48,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Gagal mengambil data distribusi' }, { status: 500 })
     }
 
-    console.log('📦 Data distribusi:', data)
+    console.log('📦 Data distribusi (with join):', JSON.stringify(data, null, 2))
     return NextResponse.json(data)
   } catch (error) {
     console.error('❌ Server Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
 
 export async function PATCH(req: Request) {
   try {
@@ -50,6 +65,20 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Ambil data distribusi sebelum update, agar tahu nik, jenis, jumlah
+    const { data: distribusi, error: distribusiError } = await supabase
+      .from('distribusi_pupuk')
+      .select('nik, jenis_pupuk, jumlah')
+      .eq('id_transaksi', id_transaksi)
+      .single()
+
+    if (distribusiError || !distribusi) {
+      return NextResponse.json({ error: 'Distribusi tidak ditemukan' }, { status: 404 })
+    }
+
+    const { nik, jenis_pupuk, jumlah } = distribusi
+
+    // Update status distribusi
     const { data, error } = await supabase
       .from('distribusi_pupuk')
       .update({ status_acc })
@@ -75,12 +104,30 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data) // ✅ Kembalikan data yang valid
+    // Jika disetujui, kurangi jatah pupuk
+    if (status_acc === 'approved') {
+      const kolom = jenis_pupuk.toLowerCase() // 'urea' | 'phonska' | 'organik'
+
+      const { error: updateJatahError } = await supabase
+        .rpc('kurangi_jatah_pupuk', {
+          p_nik: nik,
+          p_jenis: kolom,
+          p_jumlah: jumlah
+        })
+
+      if (updateJatahError) {
+        console.error('❌ Gagal mengurangi jatah pupuk:', updateJatahError)
+        return NextResponse.json({ error: 'Gagal mengurangi jatah pupuk' }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json(data)
   } catch (error) {
     console.error('❌ Error in PATCH /api/distribusi:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
 
 export async function POST(req: Request) {
   try {
