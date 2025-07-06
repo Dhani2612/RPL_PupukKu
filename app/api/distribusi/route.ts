@@ -7,49 +7,37 @@ export async function GET(req: Request) {
     const status = searchParams.get('status')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const nik = searchParams.get('nik') // ✅ Tambahan
-    const limit = searchParams.get('limit') // ✅ Tambahan
+    const nik = searchParams.get('nik')
+    const limit = searchParams.get('limit')
+
+    console.log('🔍 Params:', { status, startDate, endDate, nik, limit })
 
     let query = supabase
       .from('distribusi')
-      .select(`
-        id_transaksi,
-        tanggal,
-        status_acc,
-        jenis_pupuk,
-        jumlah,
-        nik
-      `)
+      .select('*') // ambil semua kolom dulu
       .order('tanggal', { ascending: false })
 
-    if (status) {
-      query = query.eq('status_acc', status)
-    }
-
+    if (status) query = query.eq('status_acc', status)
+    if (nik) query = query.eq('nik', nik)
     if (startDate && endDate) {
-      query = query
-        .gte('tanggal', startDate)
-        .lte('tanggal', endDate)
+      query = query.gte('tanggal', startDate).lte('tanggal', endDate)
     }
-
-    if (nik) {
-      query = query.eq('nik', nik)
-    }
-
     if (limit) {
-      query = query.limit(parseInt(limit))
+      const limitValue = parseInt(limit)
+      if (!isNaN(limitValue)) query = query.limit(limitValue)
     }
 
     const { data, error } = await query
 
     if (error) {
-      console.error('❌ Error fetching distribusi:', error)
+      console.error('❌ Supabase Error:', error)
       return NextResponse.json({ error: 'Gagal mengambil data distribusi' }, { status: 500 })
     }
 
+    console.log('📦 Data distribusi:', data)
     return NextResponse.json(data)
   } catch (error) {
-    console.error('❌ Server error:', error)
+    console.error('❌ Server Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
