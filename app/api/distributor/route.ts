@@ -1,23 +1,20 @@
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(req: Request) {
   try {
-    const [rows] = await pool.execute(
-      `SELECT id_distributor, nama
-       FROM distributor`
-    )
+    const { data, error } = await supabase
+      .from('distributor')
+      .select('id_distributor, nama')
 
-    if (!rows || (rows as any[]).length === 0) {
-      return NextResponse.json([])
+    if (error) {
+      console.error('❌ Error fetching distributors:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(rows)
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching distributors:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('❌ Server error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

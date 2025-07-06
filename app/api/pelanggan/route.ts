@@ -24,12 +24,12 @@ export async function GET(req: Request) {
       .returns<Pelanggan[]>()
 
 if (nik) {
-const { data, error } = await (supabase
+const { data, error } = await supabase
   .from('pelanggan')
-  // @ts-ignore
+  .select('nik, nama, kelompok_tani, alamat, tanggal_lahir, status_verifikasi, id_distributor') // ✅ Tambahkan ini
   .eq('nik', nik)
-  .select('*')
-  .single()) // ← abaikan error TypeScript-nya
+  .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'Customer not found' }, { status: 404 })
   return NextResponse.json(data)

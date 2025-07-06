@@ -7,6 +7,8 @@ export async function GET(req: Request) {
     const status = searchParams.get('status')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const nik = searchParams.get('nik')  // ✅ Tambahkan ini
+    const limit = searchParams.get('limit')  // ✅ Untuk aktivitas terakhir
 
     let query = supabase
       .from('distribusi')
@@ -14,27 +16,26 @@ export async function GET(req: Request) {
         id_distribusi,
         tanggal_distribusi,
         status_acc,
-        pelanggan:nik (
-          nik,
-          nama,
-          kelompok_tani,
-          alamat
-        ),
-        pupuk: id_pupuk (
-          jenis_pupuk,
-          jumlah_kg
-        )
+        nik,
+        jenis_pupuk,
+        jumlah
       `)
       .order('tanggal_distribusi', { ascending: false })
 
-    // Filter by status
     if (status) {
       query = query.eq('status_acc', status)
     }
 
-    // Filter by date
     if (startDate && endDate) {
       query = query.gte('tanggal_distribusi', startDate).lte('tanggal_distribusi', endDate)
+    }
+
+    if (nik) {
+      query = query.eq('nik', nik)
+    }
+
+    if (limit) {
+      query = query.limit(Number(limit))
     }
 
     const { data, error } = await query
@@ -50,3 +51,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+

@@ -132,9 +132,13 @@ export default function CustomerDashboard() {
         Organik: 0
       }
 
-      distributions.forEach((dist: any) => {
-        usedAmounts[dist.jenis_pupuk] += dist.jumlah
-      })
+    distributions.forEach((dist: any) => {
+      const jenis = dist.jenis_pupuk as string;
+      if (jenis in usedAmounts) {
+        usedAmounts[jenis as keyof typeof usedAmounts] += dist.jumlah;
+      }
+    });
+
 
       const quotas: QuotaData[] = [
         {
