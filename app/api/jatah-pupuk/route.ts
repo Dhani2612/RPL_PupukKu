@@ -3,11 +3,8 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET(req: Request) {
   try {
-    console.log('✅ [GET] /api/jatah-pupuk called')
-
     const { searchParams } = new URL(req.url)
     const nik = searchParams.get('nik')
-    console.log('📥 NIK parameter:', nik)
 
     // Ambil semua jatah pupuk
     const { data: jatahData, error: jatahError } = await supabase
@@ -19,7 +16,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: jatahError.message }, { status: 500 })
     }
 
-    // Ambil semua pelanggan (untuk digabungkan info nama & kelompok)
+    // Ambil data pelanggan untuk digabungkan
     const { data: pelangganData, error: pelangganError } = await supabase
       .from('pelanggan')
       .select('nik, nama, kelompok_tani')
@@ -29,7 +26,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: pelangganError.message }, { status: 500 })
     }
 
-    // Gabungkan data jatah dengan data pelanggan berdasarkan NIK
+    // Gabungkan data jatah dan pelanggan
     const merged = jatahData.map((jatah) => {
       const match = pelangganData.find((p) => p.nik === jatah.nik)
       return {
@@ -41,15 +38,48 @@ export async function GET(req: Request) {
       }
     })
 
-    // Jika pakai filter NIK
-    const filtered = nik ? merged.find((item) => item.nik === nik) : merged
-    if (nik && !filtered) {
-      return NextResponse.json({ error: 'Quota not found' }, { status: 404 })
+    // Hitung total jatah pupuk
+    const total = {
+      urea: merged.reduce((sum, q) => sum + (q.urea || 0), 0),
+      phonska: merged.reduce((sum, q) => sum + (q.phonska || 0), 0),
+      organik: merged.reduce((sum, q) => sum + (q.organik || 0), 0),
     }
 
-    return NextResponse.json({ quotas: filtered })
+    // Ambil distribusi pupuk yang approved
+    const { data: distribusiData, error: distribusiError } = await supabase
+      .from('distribusi_pupuk')
+      .select('jenis_pupuk, jumlah')
+      .eq('status_acc', 'approved')
+
+    if (distribusiError) {
+      console.error('❌ Gagal ambil distribusi_pupuk:', distribusiError)
+      return NextResponse.json({ error: distribusiError.message }, { status: 500 })
+    }
+
+    // Hitung jumlah pupuk yang sudah digunakan
+    const used = { urea: 0, phonska: 0, organik: 0 }
+    for (const item of distribusiData || []) {
+      if (item.jenis_pupuk === 'Urea') used.urea += item.jumlah || 0
+      if (item.jenis_pupuk === 'Phonska') used.phonska += item.jumlah || 0
+      if (item.jenis_pupuk === 'Organik') used.organik += item.jumlah || 0
+    }
+
+    // Hitung sisa jatah
+    const remaining = {
+      urea: total.urea - used.urea,
+      phonska: total.phonska - used.phonska,
+      organik: total.organik - used.organik
+    }
+
+    const filtered = nik ? merged.find((item) => item.nik === nik) : merged
+
+    return NextResponse.json({
+      quotas: filtered || [],
+      stats: { total, used, remaining }
+    })
+
   } catch (error) {
-    console.error('❌ Error in /api/jatah-pupuk:', error)
+    console.error('❌ Error in GET /api/jatah-pupuk:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
