@@ -19,6 +19,11 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
+function formatNumber(val?: number) {
+  return typeof val === 'number'
+    ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0.00"
+}
 interface QuotaData {
   jenis_pupuk: string
   remaining: number
@@ -351,31 +356,31 @@ export default function CustomerDashboard() {
               Ajukan Permintaan
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {quotaData.map((quota) => (
-              <Card key={quota.jenis_pupuk} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">Sisa Jatah {quota.jenis_pupuk}</CardTitle>
-                  <Package className="h-5 w-5 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gray-800">
-                    {quota.remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {quota.unit}
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Total: {quota.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {quota.unit}</span>
-                    <span>Terpakai: {Number(quota.used).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {quota.unit}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${Math.max(0, Math.min(100, ((quota.total - quota.used) / quota.total) * 100))}%` }}
-                    ></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {quotaData.map((quota) => (
+          <Card key={quota.jenis_pupuk} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Sisa Jatah {quota.jenis_pupuk}</CardTitle>
+              <Package className="h-5 w-5 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-800">
+                {formatNumber(quota.remaining)} {quota.unit}
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Total: {formatNumber(quota.total)} {quota.unit}</span>
+                <span>Terpakai: {formatNumber(quota.used)} {quota.unit}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full"
+                  style={{ width: `${Math.max(0, Math.min(100, ((quota.total - quota.used) / quota.total) * 100))}%` }}
+                ></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
         </div>
 
         <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
@@ -396,17 +401,17 @@ export default function CustomerDashboard() {
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih jenis pupuk" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {quotaData.map((quota) => (
-                      <SelectItem 
-                        key={quota.jenis_pupuk} 
-                        value={quota.jenis_pupuk}
-                        disabled={quota.remaining <= 0}
-                      >
-                        {quota.jenis_pupuk} ({quota.remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {quota.unit} tersedia)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+          <SelectContent>
+            {quotaData.map((quota) => (
+              <SelectItem
+                key={quota.jenis_pupuk}
+                value={quota.jenis_pupuk}
+                disabled={quota.remaining <= 0}
+              >
+                {quota.jenis_pupuk} ({formatNumber(quota.remaining)} {quota.unit} tersedia)
+              </SelectItem>
+            ))}
+          </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
@@ -418,10 +423,10 @@ export default function CustomerDashboard() {
                   value={newRequest.jumlah || ''}
                   onChange={(e) => setNewRequest(prev => ({ ...prev, jumlah: parseInt(e.target.value) || 0 }))}
                 />
-                {newRequest.jenis_pupuk && (
-                  <p className="text-sm text-gray-500">
-                    Sisa jatah: {quotaData.find(q => q.jenis_pupuk === newRequest.jenis_pupuk)?.remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
-                  </p>
+          {newRequest.jenis_pupuk && (
+            <p className="text-sm text-gray-500">
+              Sisa jatah: {formatNumber(quotaData.find(q => q.jenis_pupuk === newRequest.jenis_pupuk)?.remaining)} kg
+            </p>
                 )}
               </div>
             </div>
@@ -436,47 +441,47 @@ export default function CustomerDashboard() {
 
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-gray-800">Aktivitas Terakhir</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recentActivity.length === 0 ? (
-              <p className="text-gray-500 col-span-3 text-center py-4">
-                Belum ada aktivitas distribusi
-              </p>
-            ) : (
-              recentActivity.map((activity) => (
-                <Card key={activity.id_transaksi}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">
-                      {activity.jenis_pupuk}
-                    </CardTitle>
-                    {activity.status_acc === "approved" ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : activity.status_acc === "pending" ? (
-                      <Clock className="h-5 w-5 text-yellow-600" />
-                    ) : (
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-gray-800">
-                      {activity.jumlah.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>{new Date(activity.tanggal).toLocaleDateString('id-ID')}</span>
-                      <span className={`font-medium ${
-                        activity.status_acc === "approved" 
-                          ? "text-green-600" 
-                          : activity.status_acc === "pending"
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                      }`}>
-                        {activity.status_acc === "approved" 
-                          ? "Disetujui" 
-                          : activity.status_acc === "pending"
-                            ? "Menunggu"
-                            : "Ditolak"}
-                      </span>
-                    </div>
-                  </CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {recentActivity.length === 0 ? (
+          <p className="text-gray-500 col-span-3 text-center py-4">
+            Belum ada aktivitas distribusi
+          </p>
+        ) : (
+          recentActivity.map((activity) => (
+            <Card key={activity.id_transaksi}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {activity.jenis_pupuk}
+                </CardTitle>
+                {activity.status_acc === "approved" ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : activity.status_acc === "pending" ? (
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-800">
+                  {formatNumber(activity.jumlah)} kg
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>{new Date(activity.tanggal).toLocaleDateString('id-ID')}</span>
+                  <span className={`font-medium ${
+                    activity.status_acc === "approved" 
+                      ? "text-green-600" 
+                      : activity.status_acc === "pending"
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                  }`}>
+                    {activity.status_acc === "approved" 
+                      ? "Disetujui" 
+                      : activity.status_acc === "pending"
+                        ? "Menunggu"
+                        : "Ditolak"}
+                  </span>
+                </div>
+              </CardContent>
                 </Card>
               ))
             )}
