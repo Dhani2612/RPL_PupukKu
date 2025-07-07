@@ -45,12 +45,15 @@ export async function POST(req: Request) {
           nik,
           nama,
           kelompok_tani: kelompok_tani || null,
-          password,           // nanti bisa diganti dengan hash
+          password,
           alamat: alamat || null,
           tanggal_lahir: tanggal_lahir || null,
-          status_verifikasi: false
+          status_verifikasi: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
       ])
+
       .select()              // minta Supabase mengembalikan baris yang baru dibuat
 
     if (insertError) {
